@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Sun, Moon } from 'lucide-react';
 import logo from '@/assets/docverifier-logo.png';
+import { useTheme } from './ThemeProvider';
 
 interface HeaderProps {};
 
 const Header = (): JSX.Element => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const navLinks = [
     { name: 'Features', href: '#features' },
@@ -35,6 +37,13 @@ const Header = (): JSX.Element => {
                 {link.name}
               </a>
             ))}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-muted transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
           </div>
 
           <button

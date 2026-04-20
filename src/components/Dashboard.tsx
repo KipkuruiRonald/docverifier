@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Clock, ChevronDown, ChevronUp, FileCheck, FileDigit, AlertCircle } from 'lucide-react';
 
 interface ActivityData {
   date: string;
@@ -10,11 +11,13 @@ interface ActivityData {
 const Dashboard = () => {
   const [activityData, setActivityData] = useState<ActivityData[]>([]);
   const [stats, setStats] = useState({ totalHashed: 0, totalVerified: 0, matchRate: 0 });
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [events, setEvents] = useState<{ type: string; timestamp: number; matches?: boolean; hash?: string }[]>([]);
 
   useEffect(() => {
-    const events = JSON.parse(localStorage.getItem('docverifier_events') || '[]');
+    const storedEvents = JSON.parse(localStorage.getItem('docverifier_events') || '[]');
     
-    if (events.length === 0) {
+    if (storedEvents.length === 0) {
       setActivityData([
         { date: 'No Data', hashed: 0, verified: 0 }
       ]);
@@ -22,11 +25,13 @@ const Dashboard = () => {
       return;
     }
 
-    const hashedCount = events.filter((e: { type: string }) => e.type === 'hash').length;
-    const verifiedEvents = events.filter((e: { type: string }) => e.type === 'verify');
+    const hashedCount = storedEvents.filter((e: { type: string }) => e.type === 'hash').length;
+    const verifiedEvents = storedEvents.filter((e: { type: string }) => e.type === 'verify');
     const verifiedCount = verifiedEvents.length;
     const matchesCount = verifiedEvents.filter((e: { matches: boolean }) => e.matches).length;
     const matchRate = verifiedCount > 0 ? Math.round((matchesCount / verifiedCount) * 100) : 0;
+
+    setEvents(storedEvents.slice(-20).reverse());
 
     const last7Days: Record<string, { hashed: number; verified: number }> = {};
     const today = new Date();
@@ -38,7 +43,7 @@ const Dashboard = () => {
       last7Days[key] = { hashed: 0, verified: 0 };
     }
 
-    events.forEach((event: { type: string; timestamp: number }) => {
+    storedEvents.forEach((event: { type: string; timestamp: number }) => {
       const eventDate = new Date(event.timestamp);
       const daysDiff = Math.floor((today.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff >= 0 && daysDiff < 7) {
@@ -185,6 +190,46 @@ const Dashboard = () => {
             Export CSV
           </button>
         </div>
+
+        {events.length > 0 && (
+          <div className="mt-8">
+            <button
+              onClick={() => setHistoryOpen(!historyOpen)}
+              className="w-full flex items-center justify-between p-4 rounded-2xl bg-card border border-border/50"
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                <span className="font-semibold">Activity History</span>
+                <span className="text-sm text-muted-foreground">({events.length} recent)</span>
+              </div>
+              {historyOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+            </button>
+            
+            {historyOpen && (
+              <div className="mt-2 p-4 rounded-2xl bg-card border border-border/50 max-h-64 overflow-y-auto">
+                <div className="space-y-2">
+                  {events.map((event, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2">
+                        {event.type === 'hash' ? (
+                          <FileDigit className="h-4 w-4 text-blue-500" />
+                        ) : event.matches ? (
+                          <FileCheck className="h-4 w-4 text-emerald-500" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
+                        <span className="text-sm capitalize">{event.type === 'hash' ? 'Hash Generated' : event.matches ? 'Verified (Match)' : 'Verified (Mismatch)'}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {new Date(event.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
